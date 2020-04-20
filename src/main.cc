@@ -9,10 +9,12 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <unistd.h>
+#include <strings.h>
 
 #include "ping_cli.hpp"
 #include "ping_handler.hpp"
 #include "signal_handler.hpp"
+#include "icmp_recv.hpp"
 
 // TODO:
 // - add other flags
@@ -36,10 +38,10 @@ int main(int argc, char** argv) {
     int ttl = 64; // According to RFC 1700 the recommended value for TTL for the IP is 64
     PingCliProperties *ping_cli = PingCliProperties::get_properties();
     ping_cli->set_sending(true);
-    int icmp_next_delay = 1000; // Default delay between our pings in ms (1000ms = 1s)
+    int icmp_next_delay = 4000; // Default delay between our pings in ms (1000ms = 1s)
     struct hostent *hostname = nullptr;
-    struct timeval response_timeout;
     struct sockaddr_in target_address;
+    struct timeval response_timeout;
 
     // We need to convert the hostname into IP address and check that conversion was successfull.
     // If IP address was provided instead of hostaname, the program is still going to work fine
@@ -52,6 +54,7 @@ int main(int argc, char** argv) {
     }
 
     // Setting up `sockaddr_in` struct for the target system
+    bzero(&target_address, sizeof(target_address));
     target_address.sin_family = hostname->h_addrtype;
     target_address.sin_port = 0;
     target_address.sin_addr.s_addr = *(long*)hostname->h_addr;
@@ -73,22 +76,26 @@ int main(int argc, char** argv) {
     signal(SIGINT, signal_handler);
 
     // Let's set up TTL for our ping socket
-    if (setsockopt(ping_sock_fd, IPPROTO_IP, IP_TTL, &ttl, sizeof(ttl)) < 0) {
+    if (setsockopt(ping_sock_fd, SOL_IP, IP_TTL, &ttl, sizeof(ttl)) < 0) {
         std::cerr << "Cannot set up TTL." << std::endl;
         delete ping_cli;
         close(ping_sock_fd);
         return EXIT_FAILURE;
     }
 
-    // Let's set up timeout for recv() to avoid getting stuck waiting for ICMP reply.
+    // Setting up timeout to avoid getting stuck in the recv().
     response_timeout.tv_sec = 1; // Wait one second for recv timeout
     response_timeout.tv_usec = 0;
     if (setsockopt(ping_sock_fd, SOL_SOCKET, SO_RCVTIMEO, &response_timeout, sizeof(response_timeout)) < 0) {
         std::cerr << "Cannot set up response timeout." << std::endl;
-        delete ping_cli;
-        close(ping_sock_fd);
-        return EXIT_FAILURE;
+        return -1;
     }
+
+    // TODO: Implement receiving part as a separate thread
+    // Spawning a dedicated thread to listen to incoming ICMP messages.
+    // It is partially needed to avoid getting stuck in recv() and still keep
+    // sending new ICMP requests with approximately same delay.
+    // std::thread icmp_recv_th(icmp_recv);
 
     // This is out main routine -- pinging the given hostname/IP until user will
     // decide it's enough by sending SIGINT signal to the program.
@@ -101,6 +108,9 @@ int main(int argc, char** argv) {
 
     // Let's develop a good habbit of cleaning up after ourselves.
     // In our case, we need to delete singleton instance and close socket.
+    // TODO: Once we move to separate thread for incoming ICMP messages
+    // TODO: we will need to join this thread `icmp_recv_th.join();`
+
     delete ping_cli;
     close(ping_sock_fd);
 
