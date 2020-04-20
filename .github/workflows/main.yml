@@ -20,4 +20,4 @@ jobs:
       run: cd build && make
       
     - name: Test
-      run: cd build && make test
+      run: cd build && make test VERBOSE=1
