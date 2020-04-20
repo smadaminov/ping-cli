@@ -1,4 +1,4 @@
-# ping-cli
+# ping-cli ![CI](https://github.com/smadaminov/ping-cli/workflows/CI/badge.svg)
 A simple Linux CLI app that sends an ICMP Echo-Request to a specified destination.
 
 Build
