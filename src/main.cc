@@ -39,6 +39,7 @@ int main(int argc, char** argv) {
     int icmp_next_delay = 1000; // Default delay between our pings in ms (1000ms = 1s)
     struct hostent *hostname = nullptr;
     struct timeval response_timeout;
+    struct sockaddr_in target_address;
 
     // We need to convert the hostname into IP address and check that conversion was successfull.
     // If IP address was provided instead of hostaname, the program is still going to work fine
@@ -46,8 +47,14 @@ int main(int argc, char** argv) {
     hostname = gethostbyname(argv[1]);
     if (hostname == nullptr) {
         std::cerr << "Cannot resolve hostname: " << argv[1] << std::endl;
+        delete ping_cli;
         return EINVAL;
     }
+
+    // Setting up `sockaddr_in` struct for the target system
+    target_address.sin_family = hostname->h_addrtype;
+    target_address.sin_port = 0;
+    target_address.sin_addr.s_addr = *(long*)hostname->h_addr;
 
     ip_address = inet_ntoa(*(in_addr*)hostname->h_addr);
     // Now we are going to open the socket to send our pings. Ping (ECHO REQ-REP) is implemented
@@ -57,6 +64,7 @@ int main(int argc, char** argv) {
     // Check that we were able to open obtain a file descriptor for socket.
     if (ping_sock_fd < 0) {
         std::cerr << "Cannot open socket." << std::endl;
+        delete ping_cli;
         return EXIT_FAILURE;
     }
  
@@ -85,7 +93,9 @@ int main(int argc, char** argv) {
     // This is out main routine -- pinging the given hostname/IP until user will
     // decide it's enough by sending SIGINT signal to the program.
     while(ping_cli->is_sending()) {
-        send_another_ping(ping_sock_fd);
+        if (send_another_ping(ping_sock_fd, target_address) < 0) {
+            break;
+        }
         std::this_thread::sleep_for(std::chrono::milliseconds(icmp_next_delay));
     }
 
