@@ -13,6 +13,9 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
+    - name: Install Valgrind
+      run: sudo apt-get install valgrind
+
     - name: Configure
       run: mkdir build && cd build && cmake ..
 
@@ -20,4 +23,4 @@ jobs:
       run: cd build && make
       
     - name: Test
-      run: cd build && make test VERBOSE=1
+      run: cd build && make test
