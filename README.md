@@ -37,6 +37,20 @@ There are two simple tests added to the `ping-cli`: to check for memory leaks an
  $ make test
 ```
 
+Roadmap
+-------
+
+Here is the list of the next implementation targets (in random order):
+
+<ol>
+<li>Add `tabulate` to make the output pretty.</li>
+<li>Handle issues related to RFC 792.</li>
+<li>Fix/Handle situation when replies are timed out.</li>
+<li>Add interactive shell.</li>
+<li>Add support for IPv6.</li>
+</ol>
+
+
 Authors
 -------
 - Sergey Madaminov <smadaminov@cs.stonybrook.edu>
