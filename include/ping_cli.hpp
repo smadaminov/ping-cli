@@ -10,10 +10,13 @@ class PingCliProperties {
         static PingCliProperties *get_properties();
         bool is_sending();
         void set_sending(bool keep_sending);
+        int get_message_count();
+        void inc_message_count();
 
     private:
         static PingCliProperties *properties;
         bool keep_sending;
+        int message_count;
         std::mutex keep_sending_lock; // If I ever go multithreaded may become handy
         PingCliProperties();
 };
