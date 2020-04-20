@@ -10,29 +10,16 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 #include <strings.h>
+#include <string.h>
 
 #include "ping_cli.hpp"
 #include "ping_handler.hpp"
 #include "signal_handler.hpp"
 #include "icmp_recv.hpp"
 
-// TODO:
-// - add other flags
-//  - set TTL
-//  - interactive shell
-//  - help message
-//  - set up delay between icmp messages
-// - use tabulate for a pretty output
-
 PingCliProperties *PingCliProperties::properties = nullptr;
 
 int main(int argc, char** argv) {
-    // First we need to check that there is at least one argument provided.
-    if (argc < 2) {
-        std::cerr << "Too few arguments. For the list of available options please use --help flag." << std::endl;
-        return EXIT_FAILURE;
-    }
-
     std::string ip_address;
     int ping_sock_fd = -1;
     int ttl = 64; // According to RFC 1700 the recommended value for TTL for the IP is 64
@@ -43,12 +30,51 @@ int main(int argc, char** argv) {
     struct sockaddr_in target_address;
     struct timeval response_timeout;
 
+    // First we need to check that there is at least one argument provided.
+    if (argc < 2) {
+        std::cerr << "Too few arguments. For the list of available options please use -h flag." << std::endl;
+        delete ping_cli;
+        return EXIT_FAILURE;
+    }
+
+    char hostname_arg[255];
+    strcpy(hostname_arg, argv[1]);
+
+    int c, ttl_new, delay;
+    while((c = getopt(argc, argv, "t:d:h")) != -1) {
+        switch(c) {
+            case 't':
+                ttl_new = atoi(optarg);
+                if (ttl_new < 1 && ttl_new > 255) {
+                    std::cerr << "Wrong TTL value. It should be between 1 and 255." << std::endl;
+                    return EINVAL;
+                }
+                ttl = ttl_new;
+                break;
+            case 'd':
+                delay = atoi(optarg);
+                if (delay < 2) {
+                    std::cerr << "Wrong delay value. It should be greater than 2s." << std::endl;
+                }
+                icmp_next_delay = delay * 1000;
+                break;
+            case 'h':
+                std::cout << "You can run this program as follows: ";
+                std::cout << "sudo ./bin/ping-cli hostname|IP [-t TTL] [-d DELAY]" << std::endl;
+                return EXIT_SUCCESS;
+                break;
+            default:
+                std::cerr << "Unsupported argument found." << std::endl;
+                return EINVAL;
+        }
+    }
+
     // We need to convert the hostname into IP address and check that conversion was successfull.
     // If IP address was provided instead of hostaname, the program is still going to work fine
     // and will check that IP address.
-    hostname = gethostbyname(argv[1]);
+    hostname = gethostbyname(hostname_arg);
     if (hostname == nullptr) {
-        std::cerr << "Cannot resolve hostname: " << argv[1] << std::endl;
+        std::cerr << "Cannot resolve hostname: " << hostname_arg << std::endl;
         delete ping_cli;
         return EINVAL;
     }
