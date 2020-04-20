@@ -1,5 +1,5 @@
 # ping-cli
-A simple CLI app that sends an ICMP Echo-Request to a specified destination.
+A simple Linux CLI app that sends an ICMP Echo-Request to a specified destination.
 
 Build
 -------
@@ -26,6 +26,16 @@ To run ping-cli run the following in the root directory of the repository:
 
 Note that you may need to use `sudo` as we are going to open raw sockets. You can specify the destination to ping by either
 providing its `hostname` or `IP address`.
+
+Testing
+-------
+
+There are two simple tests added to the `ping-cli`: to check for memory leaks and to check that program gracefully terminates. They can be run as follows:
+
+```bash
+ $ cd build
+ $ make test
+```
 
 Authors
 -------
