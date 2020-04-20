@@ -72,6 +72,11 @@ int send_another_ping(const int& ping_sock_fd, const struct sockaddr_in& target_
     ip = (struct iphdr*)buf;
     header = (struct icmphdr*)(buf + ip->ihl*4);
 
+    if (header->type == 11) {
+        std::cerr << "TTL: Time Exceeded." << std::endl;
+        return 0;
+    }
+
     auto id_check = pkt.header.un.echo.id == header->un.echo.id;
     auto sequence_check = pkt.header.un.echo.sequence == header->un.echo.sequence;
 
@@ -79,6 +84,7 @@ int send_another_ping(const int& ping_sock_fd, const struct sockaddr_in& target_
     // - e.g., previous messages timed out. Need to be fixed.
     if (!(id_check && sequence_check)) {
         std::cerr << "RFC 792 violation." << std::endl;
+        printf("Type: %d and Code: %d\n", header->type, header->code);
     }
 
     std::cout << "===== SENT: " << ping_cli->get_tx_message_count() << " ===== RECEIVED: " << ping_cli->get_rx_message_count() << " =====" << std::endl;
